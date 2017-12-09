@@ -31,4 +31,8 @@
         </property>
         <property name="packagesToScan" value="com.obabichev.todotree.domain"/>
     </bean>
+
+    <bean id="tokenManager" class="com.obabichev.todotree.security.TokenManager">
+        <constructor-arg name="privateKey" value="SuperSecretKey"/>
+    </bean>
 </beans>
