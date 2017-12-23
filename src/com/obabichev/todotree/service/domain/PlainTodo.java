@@ -1,53 +1,32 @@
-package com.obabichev.todotree.domain;
+package com.obabichev.todotree.service.domain;
 
-import javax.persistence.*;
+import com.obabichev.todotree.domain.PriorityType;
+
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
-@Entity
-@Table(name = "TODO")
-public class Todo {
+public class PlainTodo {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "ID")
     private Long id;
 
-    @Column(name = "NAME")
     private String name;
 
-    @Column(name = "COMMENT")
     private String comment;
 
-    @Column(name = "START_DATE")
-    @Temporal(TemporalType.DATE)
     private Date startDate;
 
-    @Column(name = "END_DATE")
-    @Temporal(TemporalType.DATE)
     private Date endDate;
 
-    @Column(name = "PRIORITY")
-    @Enumerated(EnumType.ORDINAL)
     private PriorityType priority;
 
-    @Column(name = "IMPORTANT")
     private Boolean important;
 
-    @Column(name = "WEIGHT")
     private Long weight;
 
-    @ManyToOne
-    @JoinColumn(name = "USER_ID", nullable = false)
-    private User user;
+    private Long userId;
 
-    @ManyToMany
-    @JoinTable(
-            name = "TODO_TAG",
-            joinColumns = @JoinColumn(name = "TODO_ID"),
-            inverseJoinColumns = @JoinColumn(name = "TAG_ID"))
-    private Set<Tag> tags = new HashSet<>();
+    private Set<PlainTag> tags = new HashSet<>();
 
     public Long getId() {
         return id;
@@ -113,34 +92,19 @@ public class Todo {
         this.weight = weight;
     }
 
-    public User getUser() {
-        return user;
+    public Long getUserId() {
+        return userId;
     }
 
-    public void setUser(User user) {
-        setUser(user, false);
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
-    void setUser(User user, boolean otherSideHasAlreadySet) {
-        this.user = user;
-        if (otherSideHasAlreadySet) {
-            return;
-        }
-        user.addTodo(this, true);
-    }
-
-    public Set<Tag> getTags() {
+    public Set<PlainTag> getTags() {
         return tags;
     }
 
-    public void addTag(Tag tag) {
-        addTag(tag, false);
-    }
-
-    public void addTag(Tag tag, boolean otherSideHasAlreadySet) {
-        getTags().add(tag);
-        if (!otherSideHasAlreadySet) {
-            tag.addTodo(this, true);
-        }
+    public void setTags(Set<PlainTag> tags) {
+        this.tags = tags;
     }
 }
