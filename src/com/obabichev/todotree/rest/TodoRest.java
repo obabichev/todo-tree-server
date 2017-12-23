@@ -1,5 +1,6 @@
 package com.obabichev.todotree.rest;
 
+import com.obabichev.todotree.rest.utils.AuthenticationUtils;
 import com.obabichev.todotree.service.TodoService;
 import com.obabichev.todotree.service.domain.PlainTodo;
 import org.springframework.http.HttpStatus;
@@ -20,9 +21,15 @@ public class TodoRest {
     @Resource(name = "todoService")
     private TodoService todoService;
 
-    @RequestMapping(path = "/todo", method = POST)
+    @Resource(name = "authenticationUtils")
+    private AuthenticationUtils authenticationUtils;
+
+    @RequestMapping(path = "/todo", method = RequestMethod.POST)
     public ResponseEntity<PlainTodo> create(HttpServletRequest request, @RequestBody PlainTodo plainTodo) {
-        PlainTodo result = todoService.create(plainTodo.getUserId(), plainTodo);
-        return new ResponseEntity<>(result, HttpStatus.OK);
+        return authenticationUtils.peformAfterAuthentication(request, userId -> {
+            PlainTodo result = todoService.create(userId, plainTodo);
+
+            return new ResponseEntity<>(result, HttpStatus.OK);
+        });
     }
 }

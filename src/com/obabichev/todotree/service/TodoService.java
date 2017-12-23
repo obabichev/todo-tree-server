@@ -5,11 +5,12 @@ import com.obabichev.todotree.domain.Todo;
 import com.obabichev.todotree.domain.User;
 import com.obabichev.todotree.service.domain.PlainTag;
 import com.obabichev.todotree.service.domain.PlainTodo;
+import com.obabichev.todotree.service.utils.TransactionUtils;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -17,43 +18,32 @@ import java.util.stream.Collectors;
 @Component("todoService")
 public class TodoService {
 
-    @Resource(name = "entityManagerFactory")
-    private EntityManagerFactory entityManagerFactory;
+    @Resource(name = "transactionUtils")
+    private TransactionUtils transactionUtils;
 
     public PlainTodo create(Long userId, PlainTodo plainTodo) {
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
-        entityManager.getTransaction().begin();
-
-        try {
+        return transactionUtils.performInsideTransaction(entityManager -> {
             Todo todo = create(entityManager, userId, plainTodo);
 
-            entityManager.getTransaction().commit();
+            PlainTodo result = convert(todo);
 
-            return convert(todo);
-        } finally {
-            if (entityManager.getTransaction().isActive()) {
-                entityManager.getTransaction().rollback();
-            }
-            if (entityManager.isOpen()) {
-                entityManager.close();
-            }
-        }
+            return result;
+        });
     }
 
     private PlainTodo convert(Todo todo) {
         PlainTodo plainTodo = new PlainTodo();
 
-        plainTodo.setId(todo.getId());
         plainTodo.setComment(todo.getComment());
-        plainTodo.setEndDate((Date) todo.getEndDate().clone());
-        plainTodo.setStartDate((Date) todo.getStartDate().clone());
+        plainTodo.setEndDate(todo.getEndDate());
+        plainTodo.setId(todo.getId());
         plainTodo.setImportant(todo.getImportant());
         plainTodo.setName(todo.getName());
         plainTodo.setPriority(todo.getPriority());
-        plainTodo.setWeight(todo.getWeight());
-
-        plainTodo.setUserId(todo.getUser().getId());
+        plainTodo.setStartDate(todo.getStartDate());
         plainTodo.setTags(todo.getTags().stream().map(this::convert).collect(Collectors.toSet()));
+        plainTodo.setUserId(todo.getUser().getId());
+        plainTodo.setWeight(todo.getWeight());
 
         return plainTodo;
     }
@@ -64,6 +54,7 @@ public class TodoService {
         plainTag.setId(tag.getId());
         plainTag.setName(tag.getName());
         plainTag.setTodoIds(tag.getTodoList().stream().map(Todo::getId).collect(Collectors.toSet()));
+
         return plainTag;
     }
 
@@ -83,29 +74,24 @@ public class TodoService {
 
         entityManager.persist(todo);
 
-        findOrCreateTag(plainTodo, entityManager).forEach(todo::addTag);
+        findOrCreate(entityManager, plainTodo.getTags()).forEach(todo::addTag);
 
         return todo;
     }
 
-    private List<Tag> findOrCreateTag(PlainTodo plainTodo, EntityManager entityManager) {
+    private List<Tag> findOrCreate(EntityManager entityManager, Collection<PlainTag> plainTags) {
+        return plainTags.stream().map(plainTag -> {
 
-        return plainTodo.getTags().stream()
-                .map(plainTag -> {
-                    List<Tag> tags = entityManager
-                            .createQuery("SELECT tag FROM Tag tag WHERE tag.name = :name", Tag.class)
-                            .setParameter("name", plainTag.getName())
-                            .getResultList();
-                    if (tags.size() == 1) {
-                        return tags.get(0);
-                    } else {
-                        Tag tag = new Tag(plainTag.getName());
-                        entityManager.persist(tag);
-                        return tag;
-                    }
-                })
-                .collect(Collectors.toList());
+            List<Tag> foundTags = entityManager.createQuery("SELECT tag FROM Tag tag WHERE tag.name = :name", Tag.class)
+                    .setParameter("name", plainTag.getName()).getResultList();
+
+            if (foundTags.size() == 1) {
+                return foundTags.get(0);
+            } else {
+                Tag tag = new Tag(plainTag.getName());
+                entityManager.persist(tag);
+                return tag;
+            }
+        }).collect(Collectors.toList());
     }
-
-
 }

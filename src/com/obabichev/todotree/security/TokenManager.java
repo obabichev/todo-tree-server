@@ -37,11 +37,11 @@ public class TokenManager {
         return token.equals(trustedToken);
     }
 
-    private TokenPayload extractPayload(String token) {
+    public TokenPayload extractPayload(String token) {
         String[] tokenParts = token.split("#");
-        Date createdTime = new Date(Long.valueOf(tokenParts[0]));
-        Long id = Long.valueOf(tokenParts[1]);
-        String login = tokenParts[2];
+        Long id = Long.valueOf(tokenParts[0]);
+        String login = tokenParts[1];
+        Date createdTime = new Date(Long.valueOf(tokenParts[2]));
 
         TokenPayload payload = new TokenPayload(id, login, createdTime);
 
